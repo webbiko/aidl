@@ -1,0 +1,68 @@
+2.1 Multitask, process e Threads
+	Multitask é a habilidade de executar multiplas instancias de programas ou processos em paralelo.
+	Cada processo tem seu próprio stack, heap, dados e biblioteas compartilhadas.
+	Uma thread é um processo que não tem o seu próprio espaço de endereço de memória, ele compartilha o endereço de memória com o processo pai.
+
+2.2 Process isolation
+	Um processo não pode manipular dados de outro processo e por isso a isolação do processo deve ser garantida
+	No linux ele prove um mecanismo de memória virtual que atende essa questão de segurança. É atribuido a cada acesso do processo
+	uma memória compartilhada (contiguous) e linear
+	A memória virtual é atribuida a um endereço fixo de memória onde somente o so tem essa informação
+	Esse processo de isolação garante a segurança da memória ma em muitos casos é necessário a comunicação entre os processos
+	e o so tem que prover o mecanismo de comunicação entre os processos (IPC).
+
+4 Binder
+	O binder foi inicialmente desenvolvido com o nome OpenBinder pela Be Inc e depois pela Palm Inc,
+	O OpenBinder roda em linux e extendeu as funcionalidades existentes de IPC (Inter Process communication)
+	O android customizou a implementação do OpenBinder e na release M3 a google reusou o driver original do kernal
+	porém o espado do usuário teve que ser reescrito por causa da lincença do OpenBinder não batia com a licença do Android
+	Na release M5 do android o driver tb foi reescrito.
+
+	4.4.1 Binder Communication
+		No processo de comunicação entre uma app e outra é usado o pattern de proxy
+		app a -> starts a process
+			proxy -> proxy spawn a new thread to binder driver service
+				binder driver -> delivery a message to destination object
+		app B -> receives message from binder driver
+
+	4.4.2 Transaction
+		O processo de envio de dados de um processo para o outro é chamado de transaction
+		O framework binder não oferece suporte para chamadas asynchronas. Ou seja, toda chamada de um processo ao outro é
+		sincrona e cliente-server. É possível implementar um mecanismo assincrono mas o framework não disponibiliza nada.
+
+	4.4.3 Parcel e Marshaling
+		Em uma perspectiva de orientação a objetos a transação de dados é chamada de parcel.
+		Cada objeto que precise ser transmitido remoto deve implementar a interface Parcelable
+		O processo de construir um parce é chamado de marshaling ou flattening e o processo inverso
+		de reconstruir um objeto a partir de um parse é chamado de unmarshaling ou unflattening
+
+5 AIDL
+	AIDL significa Android Interface Definition Language e foi desenvolvido pela google com a finalidade
+	de facilitar o desenvolvimento de serviços remotos
+	Nos arquivos AIDL o desencovedor precisa criar assinaturas de métodos dos serviços remotos
+	O arquivo AIDL deve ser compartilhado entre o servidor e o cliente
+
+	AIDL não é a única forma de interprocess communication. É possivel também fazer IPC usando Messenger
+	Para o uso de AIDL é necessário fazer os seguintes passos:
+
+	Server:
+	1) Crie um projeto android
+	2) Crie uma interface, métodos e salve o arquivo como .aidl
+	3) ao salvar a ferramenta aidl tool do android irá gerar um stub em gen/<package>
+	4) Crie um service:
+		4.1) crie uma classe anonima de Sub que foi gerado a partir do aidl
+		4.2) retorne a instancia do stub citado acima no método onBind
+	5) Registre o service no manifest e adicione o process como :remote
+
+	Cliente:
+	1) Crie um projeto android
+	2) Copie o mesmo aidl do server e cole no cliente. (O nome do package tem que ser identido senão não irá funcionar)
+	3) Será necessário:
+		3.1) Uma instancia do binder para instanciar o obj aidl - contém os métodos criados no server
+		3.2) Uma instancia de ServiceConnection - método onServiceConnected devolve uma instancia do obj proxy que é capaz de se comunicar com o binder driver
+
+	Um exemplo pode ser visto em : https://github.com/webbiko/aidl
+	Referencias : http://manishkpr.webheavens.com/android-aidl-example/
+				  http://java.dzone.com/articles/android-interface-definition
+				  http://java.dzone.com/articles/android-aidl-and-remote-client
+
